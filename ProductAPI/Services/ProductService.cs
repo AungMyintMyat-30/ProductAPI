@@ -6,52 +6,94 @@ using ProductInfrastructure.Data;
 using System.Collections.Generic;
 
 namespace ProductAPI.Services;
-public class ProductService(ApplicationDbContext context) : IProductService
+public class ProductService(ApplicationDbContext context, ILogger<ProductService> logger) : IProductService
 {
     private readonly ApplicationDbContext _context = context;
+    private readonly ILogger<ProductService> _logger = logger;
 
     public async Task<PaginationResultModel<List<Product>>> GetAllAsync(int skipRows, int pageSize)
     {
-        var query = _context.Products.AsNoTracking();
+        try
+        {
+            var query = _context.Products.AsNoTracking();
+            int totalRecords = await query.CountAsync();
+            List<Product> records = await query
+                .Skip(skipRows)
+                .Take(pageSize)
+                .ToListAsync();
 
-        int totalRecords = await query.CountAsync();
-        List<Product> records = await query
-            .Skip(skipRows)
-            .Take(pageSize)
-            .ToListAsync();
-
-        return new PaginationResultModel<List<Product>>(totalRecords, records);
+            return new PaginationResultModel<List<Product>>(totalRecords, records);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while getting all products.");
+            throw;
+        }
     }
 
-    public async Task<Product?> GetByIdAsync(int id) =>
-    await _context.Products.FindAsync(id);
+    public async Task<Product?> GetByIdAsync(int id)
+    {
+        try
+        {
+            return await _context.Products.FindAsync(id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error occurred while getting product by id: {id}");
+            throw;
+        }
+    }
 
     public async Task<Product> CreateAsync(Product product)
     {
-        _context.Products.Add(product);
-        await _context.SaveChangesAsync();
-        return product;
+        try
+        {
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync();
+            return product;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error occurred while creating product: {product.StockName}");
+            throw;
+        }
     }
 
     public async Task<bool> UpdateAsync(Product product)
     {
-        var result = await _context.Products.FindAsync(product.Id);
-        if (result == null) return false;
+        try
+        {
+            var result = await _context.Products.FindAsync(product.Id);
+            if (result == null) return false;
 
-        result.StockNo = product.StockNo;
-        result.StockName = product.StockName;
-        result.Price = product.Price;
-        result.Category = product.Category;
-        await _context.SaveChangesAsync();
-        return true;
+            result.StockNo = product.StockNo;
+            result.StockName = product.StockName;
+            result.Price = product.Price;
+            result.Category = product.Category;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error occurred while updating product: {product.Id}, {product.StockName}");
+            throw;
+        }
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var product = await _context.Products.FindAsync(id);
-        if (product == null) return false;
-        _context.Products.Remove(product);
-        await _context.SaveChangesAsync();
-        return true;
+        try
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return false;
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error occurred while deleting product with id: {id}");
+            throw;
+        }
     }
 }
