@@ -1,42 +1,50 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
+using ProductAPI.Models;
+using ProductCore.Helper;
+using ProductCore.Interfaces;
 using ProductCore.Models;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace ProductAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController(ITokenBuilder tokenBuilder,
+                                IConfiguration configuration,
+                                ILogger<AuthController> logger) : ControllerBase
     {
-        [HttpPost("login/{username}/{password}")]
+        private readonly ITokenBuilder _tokenBuilder = tokenBuilder;
+        private readonly IConfiguration _configuration = configuration;
+        private readonly ILogger<AuthController> _logger = logger;
+
+        /// <summary>
+        /// Authenticates a user and generates an access token upon successful login.
+        /// </summary>
+        /// <param name="request">The login credentials containing the username and password.</param>
+        /// <returns>
+        /// <response code="200">Returns a success response with the generated access token.</response>
+        /// <response code="401">Returns an unauthorized response indicating invalid credentials.</response>
+        /// </returns>
+        [AllowAnonymous]
+        [HttpPost("login")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(DefaultResponseModel), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(DefaultResponseModel), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(DefaultResponseModel), StatusCodes.Status401Unauthorized)]
-        public IActionResult Login(string username,string password)
+        public IActionResult Login([FromBody] LoginModel request)
         {
-            if (username != "admin" || password != "pswadmin")
-                return Unauthorized();
+            _logger.LogInformation($"Login attempt for user: {request.Username}");
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes("xHLVPdQqecTUNUYFX7TnBneo1jpv075J");
-
-            var tokenDescriptor = new SecurityTokenDescriptor
+            if (request.Username == "admin" && request.Password == "pswadmin")
             {
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                new Claim(ClaimTypes.Name, username)
-                }),
-                Expires = DateTime.UtcNow.AddHours(1),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return Ok(new { token = tokenHandler.WriteToken(token) });
+                string token = _tokenBuilder.GenerateAccessToken(request.Username);
+                _logger.LogInformation($"User {request.Username} logged in successfully. JWT generated.");
+                return ResponseHelper.OK_Result(new { Token = token }, "Login successful");
+            }
+            else
+            {
+                _logger.LogWarning($"Login failed for user: {request.Username}. Invalid credentials.");
+                return ResponseHelper.Unauthorized_Request(null, "Invalid credentials");
+            }
         }
     }
 }
