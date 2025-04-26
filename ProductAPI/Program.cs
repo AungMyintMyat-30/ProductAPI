@@ -4,55 +4,30 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProductAPI.Interfaces;
 using ProductAPI.Services;
+using ProductCore.Interfaces;
 using ProductInfrastructure.Data;
+using ProductInfrastructure.Services;
 using Serilog;
+using Serilog.Events;
 using System.Reflection;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure logging with Serilog
-builder.Host.UseSerilog((context, services, configuration) =>
-    configuration.WriteTo.Console().WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day)
-);
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+        theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.Code
+    )
+    .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+builder.Host.UseSerilog();
 
-// --- Add EF Core In-Memory DB ---
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseInMemoryDatabase("ProductDb");
-    options.EnableSensitiveDataLogging();
-});
-
-// --- Add Services ---
-builder.Services.AddScoped<IProductService, ProductService>();
-
-// --- Add Controllers ---
+// Add services to the container.
 builder.Services.AddControllers();
-
-// --- JWT Config ---
-var jwtSecret = "xHLVPdQqecTUNUYFX7TnBneo1jpv075J"; // Change this to a secure key
-var key = Encoding.ASCII.GetBytes(jwtSecret);
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ClockSkew = TimeSpan.FromDays(1)
-    };
-});
-
-// --- Configure Swagger ---
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -65,30 +40,27 @@ builder.Services.AddSwaggerGen(options =>
     // JWT Swagger support
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: 'Bearer[space]{token}'",
         Name = "Authorization",
-        In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Scheme = JwtBearerDefaults.AuthenticationScheme,       
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\"",
     });
-
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
                 {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header,
-            },
-            new List<string>()
-        }
-    });
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    new string[] {}
+                }
+            });
 
     // XML documentation (optional)
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -99,29 +71,74 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 
+// --- Add EF Core In-Memory DB ---
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseInMemoryDatabase("ProductDb");
+    options.EnableSensitiveDataLogging();
+});
+
+// --- Add Services ---
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ITokenBuilder, TokenBuilder>();
+
+// --- JWT Config ---
+// Moved JWT config to Program.cs
+var jwtSecret = builder.Configuration["Jwt:Key"] ?? "xHLVPdQqecTUNUYFX7TnBneo1jpv075J";  // Fallback to default, but should be in config
+var key = Encoding.ASCII.GetBytes(jwtSecret);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Events = new JwtBearerEvents
+        {
+
+            OnAuthenticationFailed = context =>
+            {
+                Log.Error(context.Exception, "Authentication failed: {Message}", context.Exception.Message);
+                return Task.CompletedTask;
+            },
+
+        };
+        var validationKey = builder.Configuration["Jwt:Key"];
+        Log.Information($"JWT Validation Key: {validationKey}");
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(validationKey ?? ""))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 // --- Build the app ---
 var app = builder.Build();
 
-// Enable CORS
-app.UseCors(builder =>
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
 {
-    builder.AllowAnyOrigin() // Adjust as needed for production
-           .AllowAnyMethod()
-           .AllowAnyHeader();
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Product API V1");
+        c.RoutePrefix = string.Empty;
+    });
+}
 
-// --- Swagger UI ---
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Product API V1");
-    c.RoutePrefix = string.Empty;
-});
-
-// --- Middleware ---
 app.UseHttpsRedirection();
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors(builder =>
+       builder.AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials()
+              .SetIsOriginAllowed(origin => true));
 
 app.MapControllers();
 
