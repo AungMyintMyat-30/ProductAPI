@@ -65,4 +65,16 @@ public class ResponseHelper
             Error = new { message}
         });
     }
+
+    public static UnauthorizedObjectResult Unauthorized_Request(dynamic? data, string? message)
+    {
+        return new(new DefaultResponseModel
+        {
+            Success = false,
+            Code = StatusCodes.Status401Unauthorized,
+            Meta = null,
+            Data = data,
+            Error = new { message }
+        });
+    }
 }
