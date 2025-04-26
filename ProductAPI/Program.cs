@@ -1,17 +1,3 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using ProductAPI.Interfaces;
-using ProductAPI.Services;
-using ProductCore.Interfaces;
-using ProductInfrastructure.Data;
-using ProductInfrastructure.Services;
-using Serilog;
-using Serilog.Events;
-using System.Reflection;
-using System.Text;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure logging with Serilog
@@ -140,6 +126,6 @@ app.UseCors(builder =>
               .AllowCredentials()
               .SetIsOriginAllowed(origin => true));
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.MapControllers();
-
 app.Run();
