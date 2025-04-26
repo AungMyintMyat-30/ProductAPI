@@ -33,17 +33,24 @@ namespace ProductAPI.Controllers
         public IActionResult Login([FromBody] LoginModel request)
         {
             _logger.LogInformation($"Login attempt for user: {request.Username}");
-
-            if (request.Username == "admin" && request.Password == "pswadmin")
+            try
             {
-                string token = _tokenBuilder.GenerateAccessToken(request.Username);
-                _logger.LogInformation($"User {request.Username} logged in successfully. JWT generated.");
-                return ResponseHelper.OK_Result(new { Token = token }, "Login successful");
+                if (request.Username == "admin" && request.Password == "pswadmin")
+                {
+                    string token = _tokenBuilder.GenerateAccessToken(request.Username);
+                    _logger.LogInformation($"User {request.Username} logged in successfully. JWT generated.");
+                    return ResponseHelper.OK_Result(new { Token = token }, "Login successful");
+                }
+                else
+                {
+                    _logger.LogWarning($"Login failed for user: {request.Username}. Invalid credentials.");
+                    return ResponseHelper.Unauthorized_Request(null, "Invalid credentials");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogWarning($"Login failed for user: {request.Username}. Invalid credentials.");
-                return ResponseHelper.Unauthorized_Request(null, "Invalid credentials");
+                _logger.LogError(ex, $"Error during login for user: {request.Username}");
+                return ResponseHelper.InternalServerError_Request(null, "Internal server error");
             }
         }
     }
