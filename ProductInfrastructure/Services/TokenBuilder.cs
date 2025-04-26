@@ -2,14 +2,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using ProductCore.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Data;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ProductInfrastructure.Services
 {
@@ -25,24 +20,32 @@ namespace ProductInfrastructure.Services
         /// <returns></returns>
         public string GenerateAccessToken(string username)
         {
-            var jwtKey = _configuration["Jwt:Key"] ?? "";
-            _logger.LogInformation($"JWT Generation Key: {jwtKey}");
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+            try
             {
-            new Claim(ClaimTypes.NameIdentifier, username),
-        };
+                var jwtKey = _configuration["Jwt:Key"] ?? "";
+                _logger.LogInformation($"Generating JWT Access Token for user: {username}");
+                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+                var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.Now.AddMinutes(30), // Token expiration time
-                signingCredentials: credentials);
+                var claims = new[]
+                {
+                new Claim(ClaimTypes.NameIdentifier, username),
+            };
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                var token = new JwtSecurityToken(
+                    issuer: _configuration["Jwt:Issuer"],
+                    audience: _configuration["Jwt:Audience"],
+                    claims: claims,
+                    expires: DateTime.Now.AddMinutes(30), // Token expiration time
+                    signingCredentials: credentials);
+
+                return new JwtSecurityTokenHandler().WriteToken(token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error generating access token for user: {username}");
+                throw;
+            }
         }
     }
 }
