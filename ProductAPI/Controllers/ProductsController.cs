@@ -1,12 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using ProductAPI.Interfaces;
 using ProductCore.Entities;
 using ProductCore.Helper;
 using ProductCore.Models;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace ProductAPI.Controllers
 {
@@ -32,8 +29,17 @@ namespace ProductAPI.Controllers
         public async Task<IActionResult> GetAll(int skipRows, int pageSize)
         {
             _logger.LogInformation($"ProductsController.GetAll called with skipRows: {skipRows}, pageSize: {pageSize}");
-            PaginationResultModel<List<Product>> result = await _service.GetAllAsync(skipRows, pageSize);
-            return ResponseHelper.OK_Result(new { result }, "Products retrieved successfully");
+            try
+            {
+
+                PaginationResultModel<List<Product>> result = await _service.GetAllAsync(skipRows, pageSize);
+                return ResponseHelper.OK_Result(new { result }, "Products retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ProductsController.GetAll");
+                return ResponseHelper.InternalServerError_Request(null, "Internal server error");
+            }
         }
 
         /// <summary>
@@ -49,14 +55,22 @@ namespace ProductAPI.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             _logger.LogInformation($"ProductsController.GetById called with id: {id}");
-            var result = await _service.GetByIdAsync(id);
-            if (result is null)
+            try
             {
-                _logger.LogWarning($"Product with id: {id} not found.");
-                return ResponseHelper.NotFound_Request(null, "Product not found!");
-            }
+                var result = await _service.GetByIdAsync(id);
+                if (result is null)
+                {
+                    _logger.LogWarning($"Product with id: {id} not found.");
+                    return ResponseHelper.NotFound_Request(null, "Product not found!");
+                }
 
-            return ResponseHelper.OK_Result(new { result }, "Product retrieved successfully!");
+                return ResponseHelper.OK_Result(new { result }, "Product retrieved successfully!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in ProductsController.GetById for id: {id}");
+                return ResponseHelper.InternalServerError_Request(null, "Internal server error");
+            }
         }
 
         /// <summary>
@@ -72,20 +86,28 @@ namespace ProductAPI.Controllers
         public async Task<IActionResult> Create([FromForm] Product product)
         {
             _logger.LogInformation($"ProductsController.Create called for product: {product.StockName}");
-            var result = await _service.GetByIdAsync(product.Id);
-            if (result is not null)
+            try
             {
-                _logger.LogWarning($"Product with id: {product.Id} already exists.");
-                return ResponseHelper.Bad_Request(null, "Product is already exist!");
-            }
+                var result = await _service.GetByIdAsync(product.Id);
+                if (result is not null)
+                {
+                    _logger.LogWarning($"Product with id: {product.Id} already exists.");
+                    return ResponseHelper.Bad_Request(null, "Product is already exist!");
+                }
 
-            var created = await _service.CreateAsync(product);
-            if (created is null)
-            {
-                _logger.LogError($"Failed to create product: {product.StockName}");
-                return ResponseHelper.Bad_Request(null, "Product cannot added!");
+                var created = await _service.CreateAsync(product);
+                if (created is null)
+                {
+                    _logger.LogError($"Failed to create product: {product.StockName}");
+                    return ResponseHelper.Bad_Request(null, "Product cannot added!");
+                }
+                return ResponseHelper.Created_Result("api/products", "Product created successfully!");
             }
-            return ResponseHelper.Created_Result("api/products", "Product created successfully!");
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in ProductsController.Create for product: {product.StockName}");
+                return ResponseHelper.InternalServerError_Request(null, "Internal server error");
+            }
         }
 
         /// <summary>
@@ -102,19 +124,27 @@ namespace ProductAPI.Controllers
         public async Task<IActionResult> Update(int id, [FromBody] Product product)
         {
             _logger.LogInformation($"ProductsController.Update called for id: {id}, product: {product.StockName}");
-            if (id != product.Id)
+            try
             {
-                _logger.LogWarning($"Product id in route ({id}) does not match product id in body ({product.Id}).");
-                return ResponseHelper.Bad_Request(null, "Product ID mismatch!");
-            }
-            var updated = await _service.UpdateAsync(product);
-            if (!updated)
-            {
-                _logger.LogWarning($"Product with id: {id} not found for update.");
-                return ResponseHelper.NotFound_Request(null, "Product not found!");
-            }
+                if (id != product.Id)
+                {
+                    _logger.LogWarning($"Product id in route ({id}) does not match product id in body ({product.Id}).");
+                    return ResponseHelper.Bad_Request(null, "Product ID mismatch!");
+                }
+                var updated = await _service.UpdateAsync(product);
+                if (!updated)
+                {
+                    _logger.LogWarning($"Product with id: {id} not found for update.");
+                    return ResponseHelper.NotFound_Request(null, "Product not found!");
+                }
 
-            return ResponseHelper.OK_Result(new { updated }, "Product updated successfully!");
+                return ResponseHelper.OK_Result(new { updated }, "Product updated successfully!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in ProductsController.Update for id: {id}, product: {product.StockName}");
+                return ResponseHelper.InternalServerError_Request(null, "Internal server error");
+            }
         }
 
         /// <summary>
@@ -130,13 +160,21 @@ namespace ProductAPI.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             _logger.LogInformation($"ProductsController.Delete called for id: {id}");
-            var deleted = await _service.DeleteAsync(id);
-            if (!deleted)
+            try
             {
-                _logger.LogWarning($"Product with id: {id} not found for deletion.");
-                return ResponseHelper.NotFound_Request(null, "Product not found!");
+                var deleted = await _service.DeleteAsync(id);
+                if (!deleted)
+                {
+                    _logger.LogWarning($"Product with id: {id} not found for deletion.");
+                    return ResponseHelper.NotFound_Request(null, "Product not found!");
+                }
+                return ResponseHelper.OK_Result(new { deleted }, "Product deleted successfully!");
             }
-            return ResponseHelper.OK_Result(new { deleted }, "Product deleted successfully!");
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in ProductsController.Delete for id: {id}");
+                return ResponseHelper.InternalServerError_Request(null, "Internal server error");
+            }
         }
     }
 }
