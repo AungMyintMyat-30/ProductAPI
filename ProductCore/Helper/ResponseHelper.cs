@@ -6,7 +6,7 @@ namespace ProductCore.Helper;
 
 public class ResponseHelper
 {
-    public static OkObjectResult OK_Result(dynamic? data,string? message)
+    public static OkObjectResult OK_Result(dynamic? data, string? message)
     {
         return new(new DefaultResponseModel
         {
@@ -24,7 +24,7 @@ public class ResponseHelper
         {
             Success = true,
             Code = StatusCodes.Status201Created,
-            Meta =null,
+            Meta = null,
             Data = data,
             Error = null
         });
@@ -62,7 +62,7 @@ public class ResponseHelper
             Code = StatusCodes.Status500InternalServerError,
             Meta = null,
             Data = data,
-            Error = new { message}
+            Error = new { message }
         });
     }
 

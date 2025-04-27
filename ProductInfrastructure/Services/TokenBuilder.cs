@@ -22,17 +22,17 @@ namespace ProductInfrastructure.Services
         {
             try
             {
-                var jwtKey = _configuration["Jwt:Key"] ?? "";
+                string jwtKey = _configuration["Jwt:Key"] ?? "";
                 _logger.LogInformation($"Generating JWT Access Token for user: {username}");
-                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-                var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+                SymmetricSecurityKey securityKey = new(Encoding.UTF8.GetBytes(jwtKey));
+                SigningCredentials credentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-                var claims = new[]
+                Claim[] claims = new[]
                 {
                 new Claim(ClaimTypes.NameIdentifier, username),
             };
 
-                var token = new JwtSecurityToken(
+                JwtSecurityToken token = new(
                     issuer: _configuration["Jwt:Issuer"],
                     audience: _configuration["Jwt:Audience"],
                     claims: claims,

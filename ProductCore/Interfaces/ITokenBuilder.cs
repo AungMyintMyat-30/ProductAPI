@@ -2,6 +2,6 @@
 {
     public interface ITokenBuilder
     {
-        public string GenerateAccessToken(string user);
+        string GenerateAccessToken(string user);
     }
 }

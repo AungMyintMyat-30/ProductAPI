@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ProductAPI.Models;
 using ProductCore.Helper;
-using ProductCore.Interfaces;
 using ProductCore.Models;
 
 namespace ProductAPI.Controllers

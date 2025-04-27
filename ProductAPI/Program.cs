@@ -12,7 +12,6 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 builder.Host.UseSerilog();
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -70,7 +69,7 @@ builder.Services.AddScoped<ITokenBuilder, TokenBuilder>();
 
 // --- JWT Config ---
 // Moved JWT config to Program.cs
-var jwtSecret = builder.Configuration["Jwt:Key"] ?? "xHLVPdQqecTUNUYFX7TnBneo1jpv075J";  // Fallback to default, but should be in config
+var jwtSecret = builder.Configuration["Jwt:Key"] ?? "xHLVPdQqecTUNUYFX7TnBneo1jpv075J";
 var key = Encoding.ASCII.GetBytes(jwtSecret);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

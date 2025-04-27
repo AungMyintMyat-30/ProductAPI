@@ -31,7 +31,6 @@ namespace ProductAPI.Controllers
             _logger.LogInformation($"ProductsController.GetAll called with skipRows: {skipRows}, pageSize: {pageSize}");
             try
             {
-
                 PaginationResultModel<List<Product>> result = await _service.GetAllAsync(skipRows, pageSize);
                 return ResponseHelper.OK_Result(new { result }, "Products retrieved successfully");
             }

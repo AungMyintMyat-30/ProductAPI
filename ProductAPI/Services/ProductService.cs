@@ -1,9 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ProductAPI.Interfaces;
-using ProductCore.Entities;
+﻿using ProductCore.Entities;
 using ProductCore.Models;
-using ProductInfrastructure.Data;
-using System.Collections.Generic;
 
 namespace ProductAPI.Services;
 public class ProductService(ApplicationDbContext context, ILogger<ProductService> logger) : IProductService
@@ -15,7 +11,7 @@ public class ProductService(ApplicationDbContext context, ILogger<ProductService
     {
         try
         {
-            var query = _context.Products.AsNoTracking();
+            IQueryable<Product> query = _context.Products.AsNoTracking();
             int totalRecords = await query.CountAsync();
             List<Product> records = await query
                 .Skip(skipRows)
@@ -48,8 +44,8 @@ public class ProductService(ApplicationDbContext context, ILogger<ProductService
     {
         try
         {
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            _ = _context.Products.Add(product);
+            _ = await _context.SaveChangesAsync();
             return product;
         }
         catch (Exception ex)
@@ -63,14 +59,14 @@ public class ProductService(ApplicationDbContext context, ILogger<ProductService
     {
         try
         {
-            var result = await _context.Products.FindAsync(product.Id);
+            Product? result = await _context.Products.FindAsync(product.Id);
             if (result == null) return false;
 
             result.StockNo = product.StockNo;
             result.StockName = product.StockName;
             result.Price = product.Price;
             result.Category = product.Category;
-            await _context.SaveChangesAsync();
+            _ = await _context.SaveChangesAsync();
             return true;
         }
         catch (Exception ex)
@@ -84,10 +80,10 @@ public class ProductService(ApplicationDbContext context, ILogger<ProductService
     {
         try
         {
-            var product = await _context.Products.FindAsync(id);
+            Product? product = await _context.Products.FindAsync(id);
             if (product == null) return false;
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            _ = _context.Products.Remove(product);
+            _ = await _context.SaveChangesAsync();
             return true;
         }
         catch (Exception ex)

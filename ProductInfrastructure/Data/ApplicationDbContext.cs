@@ -3,7 +3,7 @@ using ProductCore.Entities;
 
 namespace ProductInfrastructure.Data
 {
-    public class ApplicationDbContext:DbContext
+    public class ApplicationDbContext : DbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
        : base(options) { }

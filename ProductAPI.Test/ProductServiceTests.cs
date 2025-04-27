@@ -120,7 +120,7 @@ namespace ProductAPI.Test
             Product initialProduct = new() { StockNo = "OLD123", StockName = "Old Name", Price = 25, Category = "Old" };
             _ = context.Products.Add(initialProduct);
             _ = await context.SaveChangesAsync();
-            int productId = initialProduct.Id; // Get the generated ID
+            int productId = initialProduct.Id;
 
             ILogger<ProductService> logger = _loggerFactory.CreateLogger<ProductService>();
             ProductService service = new(context, logger);
