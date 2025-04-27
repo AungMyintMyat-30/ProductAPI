@@ -43,9 +43,7 @@ It includes full CRUD functionality, pagination, input validation, JWT authentic
 
 # Authentication
 - Use the /api/auth/login endpoint to obtain a JWT token.
-
 ### Credentials:
-
 - Username: admin
 
 - Password: pswadmin
