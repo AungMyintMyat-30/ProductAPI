@@ -49,15 +49,3 @@ It includes full CRUD functionality, pagination, input validation, JWT authentic
 - Password: pswadmin
 
 - Use the token in Authorization: Bearer {token} header for protected endpoints.
-
-# Contact
-If you have any questions, feel free to reach out. Thank you for the opportunity!
-
-# Notes for Interview Submission
-- Clean architecture
-
-- Follows SOLID principles
-
-- Bonus tasks (JWT authentication, logging, unit testing) completed
-
-- Focused on maintainability and extensibility
